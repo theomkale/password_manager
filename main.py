@@ -1,3 +1,4 @@
+import json
 from tkinter import *
 from tkinter import messagebox
 import random
@@ -32,13 +33,20 @@ def save_password():
     username = username_entry.get()
     password = password_entry.get()
 
-    data = f"{website} | {username} | {password}\n"
+    data = {
+        website: {
+            "username": username,
+            "password": password
+
+        }
+
+    }
+
     success_message = f"Are you sure you want to save these details?\n" \
                       f"Website:{website}\n" \
                       f"Username:{username}\n" \
                       f"Password:{password}\n"
-    fail_message = "Are you high?\n" \
-                   "Please add all the fields mentioned."
+    fail_message = "Please add all the fields mentioned."
     if len(password) == 0 and len(username) == 0 and len(website) == 0:
         valid = False
     else:
@@ -50,13 +58,33 @@ def save_password():
         msg = messagebox.askyesno(title=website_label, message=success_message)
 
     if valid:
-        with open("secret.txt", mode="a") as file:
-            file.write(data)
-        if msg:
-            messagebox.showinfo(title="Success", message=f"You can forget {password} now ;-)")
+        try:
+            with open("secret.json", mode="r") as json_file:
+                old_data = json.load(json_file)
+        except FileNotFoundError:
+            with open("secret.json", mode="w") as json_file:
+                json.dump(data, fp=json_file, indent=4)
+        else:
+            old_data.update(data)
+            with open("secret.json", mode="w") as json_file:
+                json.dump(old_data, indent=4, fp=json_file)
+        finally:
             website_entry.delete(0, END)
             username_entry.delete(0, END)
             password_entry.delete(0, END)
+
+
+def search_password():
+    key = website_entry.get()
+    try:
+        with open('secret.json', mode='r') as json_file:
+            saved_passwords = json.load(fp=json_file)
+            password = saved_passwords[key]['password']
+            username = saved_passwords[key]['username']
+    except KeyError:
+        messagebox.showinfo(title="Error", message=f"I think {key} was not stored. \n You can cry now!")
+    else:
+        messagebox.showinfo(title="Success", message=f"Did you forget username:{username} and password:{password}")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -72,9 +100,12 @@ canvas.create_image(100, 100, image=image)
 website_label = Label(text="Website:")
 website_label.grid(row=1, column=0, sticky="E")
 
-website_entry = Entry(width=35)
-website_entry.grid(row=1, column=1, columnspan=2)
+website_entry = Entry(width=21)
+website_entry.grid(row=1, column=1)
 website_entry.insert(0, pyperclip.paste())
+
+generate_password_button = Button(text="Search Password", command=search_password)
+generate_password_button.grid(row=1, column=2)
 
 username_label = Label(text="Email/Username:")
 username_label.grid(row=2, column=0, sticky="E")
